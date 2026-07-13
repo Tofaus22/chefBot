@@ -1,0 +1,250 @@
+ChefBot - Analisis, mejoras propuestas y roadmap
+Fecha: 2026-05-15
+
+========================================
+1. QUE LE PUEDES AGREGAR AL SOFTWARE
+========================================
+
+Lo que mas mejoraria ChefBot no es sumar muchas pantallas, sino cerrar los huecos entre la UX que ya promete y lo que el backend realmente soporta.
+
+1. Compartir conversaciones de verdad
+
+En la barra lateral ya copias una URL de compartido, pero la pantalla de chat no consume ese parametro y el middleware protege la ruta, asi que hoy "compartir" no existe como feature real.
+
+Lo haria con:
+- token publico
+- ruta tipo share/[token]
+- permiso revocable
+- opcion de duplicar la receta en tu cuenta
+
+2. Perfil culinario persistente
+
+Ya tienes auth, conversaciones, mensajes y favoritos; el siguiente salto es guardar:
+- alergias
+- dieta
+- ingredientes disponibles
+- presupuesto
+- numero de porciones
+
+Eso haria que el bot deje de ser un chat generico y pase a recomendar con contexto del usuario.
+
+3. Respuestas estructuradas para recetas
+
+Ahora mismo la UI saca porciones y sugerencias parseando markdown y comentarios ocultos. Es mejor pedir al modelo una salida estable con campos como:
+- titulo
+- tiempo
+- porciones
+- ingredientes
+- pasos
+- sustituciones
+
+Con eso puedes añadir:
+- lista de compras
+- temporizadores
+- nutricion
+- escalado de porciones sin heuristicas fragiles
+
+4. Seguridad y confiabilidad
+
+La API de chat no valida sesion en servidor ni limita abuso. Añadiria:
+- auth server-side
+- rate limiting
+- cuotas por usuario
+- logs de errores
+- fallback de proveedor
+
+Ahora mismo dependes de un solo modelo, asi que cualquier caida pega directo en la experiencia.
+
+5. Busqueda util y memoria real
+
+La busqueda actual en la sidebar es local y textual. Vale mas agregar:
+- busqueda por ingredientes
+- filtros por tiempo/dificultad
+- historial semantico
+- colecciones tipo "cenas rapidas", "meal prep" o "postres"
+
+Eso hace que favoritos e historial dejen de ser solo archivo y se vuelvan reutilizables.
+
+6. Mejoras de producto que si se sentirian
+
+- plan semanal de comidas
+- lista de compras consolidada
+- sustituciones segun lo que hay en casa
+- modo "cocina paso a paso"
+- exportar receta a PDF
+- feedback de respuesta util/no util
+
+Son extensiones naturales del caso de uso culinario y encajan mejor que features genericas de chat.
+
+7. Deuda tecnica que conviene tocar pronto
+
+En la burbuja de mensaje el escalado de ingredientes usa eval para interpretar fracciones; eso conviene reemplazarlo por un parser seguro.
+
+Tambien sumaria:
+- regenerar respuesta
+- editar el ultimo prompt
+- reintentar cuando falle el stream del modelo
+
+Si hubiera que priorizar solo tres cosas, haria estas primero:
+1. compartido real
+2. perfil culinario persistente
+3. respuestas estructuradas
+
+Son las que mas suben valor de producto y ademas ordenan la base tecnica.
+
+========================================
+2. ROADMAP PRIORIZADO
+========================================
+
+Te propongo un roadmap en 3 fases, priorizado por valor real para el producto y por la base tecnica que ya tienes.
+
+Prioridades:
+- Recetas estructuradas | Impacto: Alto | Esfuerzo: Medio
+- Perfil culinario del usuario | Impacto: Alto | Esfuerzo: Medio
+- Seguridad y confiabilidad del chat | Impacto: Alto | Esfuerzo: Bajo-Medio
+- Compartir conversaciones real | Impacto: Medio-Alto | Esfuerzo: Medio
+- Lista de compras y plan semanal | Impacto: Alto | Esfuerzo: Medio-Alto
+- Busqueda y organizacion avanzada | Impacto: Medio | Esfuerzo: Medio
+- Feedback, analytics y mejora continua | Impacto: Medio | Esfuerzo: Bajo
+
+========================================
+3. FASE 1: AHORA
+========================================
+
+Objetivo: subir valor de producto sin abrir demasiados frentes.
+
+1. Recetas estructuradas
+
+La UI actual extrae porciones y sugerencias parseando markdown, y el chat manda texto libre. Haria que el modelo devuelva JSON o un formato estable con:
+- titulo
+- porciones
+- tiempo
+- ingredientes
+- pasos
+- sustituciones
+- tips
+- sugerencias_relacionadas
+
+2. Perfil culinario
+
+Añadir tabla de preferencias y un onboarding ligero:
+- alergias
+- dieta
+- nivel de cocina
+- presupuesto
+- tiempo disponible
+- ingredientes frecuentes
+
+Ese contexto luego se inyecta en el prompt y en el flujo del chat.
+
+3. Hardening basico
+
+En la API de chat falta:
+- validar sesion en servidor
+- poner rate limiting
+- manejar mejor errores y reintentos
+
+Esto es poco vistoso, pero evita problemas serios cuando empieces a usarlo mas.
+
+========================================
+4. FASE 2: SIGUIENTE
+========================================
+
+Objetivo: cerrar promesas de UX que ya aparecen en la app.
+
+1. Compartir conversaciones de verdad
+
+Hoy la sidebar copia una URL, pero no hay soporte real de recurso compartido ni ruta publica equivalente.
+
+Aqui conviene crear:
+- tabla shared_conversations
+- token publico
+- expiracion opcional
+- revocacion
+- ruta publica de lectura
+
+2. Lista de compras
+
+Una vez que tengas recetas estructuradas, puedes transformar ingredientes en lista consolidada, marcar comprados y agrupar por categorias. Esto eleva mucho la utilidad diaria.
+
+3. Plan semanal
+
+Generar menu para 3-7 dias segun:
+- dieta
+- presupuesto
+- tiempo
+
+========================================
+5. FASE 3: DESPUES
+========================================
+
+Objetivo: retencion y diferenciacion.
+
+1. Busqueda semantica y filtros
+
+Buscar por:
+- ingrediente
+- tiempo
+- dificultad
+- tipo de comida
+
+No solo por texto del titulo o snippet.
+
+2. Modo cocina paso a paso
+
+Un flujo especial donde el usuario avanza por pasos, con temporizadores y sustituciones rapidas.
+
+3. Feedback y metricas
+
+Guardar si una receta fue:
+- util
+- cocinada
+- guardada
+- compartida
+- abandonada
+
+Eso permite ajustar prompts y roadmap con datos.
+
+========================================
+6. ORDEN RECOMENDADO
+========================================
+
+Si quieres maximizar impacto con el menor riesgo, haria esto:
+
+1. Respuestas estructuradas
+2. Perfil culinario
+3. Seguridad y rate limiting
+4. Compartido real
+5. Lista de compras
+6. Plan semanal
+7. Busqueda avanzada y metricas
+
+========================================
+7. QUE DEJARIA FUERA POR AHORA
+========================================
+
+No meteria todavia:
+- multiples proveedores de IA complejos
+- sistema social completo
+- app movil nativa
+- panel admin grande
+
+Eso dispersa esfuerzo antes de consolidar el nucleo del producto.
+
+========================================
+8. APUESTA MAS FUERTE
+========================================
+
+Si quieres que ChefBot deje de parecer "otro chat con IA" y empiece a sentirse como software util, la combinacion ganadora es esta:
+
+1. recetas estructuradas
+2. perfil culinario persistente
+3. lista de compras
+4. plan semanal
+
+Eso crea un loop claro:
+- preguntar
+- cocinar
+- guardar
+- planificar
+- volver

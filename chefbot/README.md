@@ -47,13 +47,26 @@ src/
 
 ## Variables de entorno
 
-Crea un archivo `.env.local`:
+Copia `.env.example` a `.env.local` para desarrollo:
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=...
-NEXT_PUBLIC_SUPABASE_ANON_KEY=...
-GROQ_API_KEY=...
+cp .env.example .env.local
+# edita .env.local con tus claves reales
 ```
+
+Variables necesarias:
+
+| Variable | Tipo | Descripción |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | pública | URL del proyecto Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | pública | Clave anónima de Supabase |
+| `GROQ_API_KEY` | servidor | API key de [Groq](https://console.groq.com) |
+
+Opcional:
+
+| Variable | Default | Descripción |
+| --- | --- | --- |
+| `GROQ_MODEL` | `llama-3.1-8b-instant` | Modelo Groq a usar |
 
 ## Comandos
 
@@ -68,6 +81,29 @@ npm run lint       # ESLint
 ## Base de datos
 
 Ejecuta `supabase-setup.sql` para crear el esquema inicial y `supabase-migrations.sql` para las migraciones posteriores (favoritos, perfil culinario, tokens de compartido, etc.).
+
+## Deploy en Netlify
+
+1. Sube el repositorio a GitHub/GitLab.
+2. En Netlify, **Add new site → Import an existing project** y elige el repo.
+3. Netlify detecta Next.js automáticamente. `netlify.toml` ya define:
+   - Build command: `npm run build`
+   - Publish: `.next`
+   - Plugin `@netlify/plugin-nextjs`
+   - Node 20
+4. En **Site settings → Environment variables**, agrega las mismas claves de `.env.local`.
+5. En **Site settings → Build & deploy → Post processing**, asegúrate de que "Bundle dependencies" está activo si quieres cold-start más rápidos.
+6. Deploy.
+
+### Limitaciones serverless
+
+- **Rate limit en memoria:** el contador por usuario vive dentro de una sola instancia de la función serverless. En Netlify con varias instancias simultáneas el límite real es `20 req/min × N instancias`. Para producción real, mover a Upstash Redis o Vercel KV.
+- **Cache de perfil culinario en memoria:** idem, vive solo dentro de la instancia. TTL de 60 s, así que el impacto es bajo (consultas a Supabase, no a Groq).
+- **`runtime = "nodejs"`** en `/api/chat`: necesario porque Groq SDK y Supabase SSR usan APIs de Node. Netlify lo soporta en su runtime Node.
+
+### Dominio y Supabase
+
+Si usas dominio propio en Netlify, agrégalo a **Supabase → Authentication → URL Configuration** (Site URL + Redirect URLs) para que el login OAuth funcione.
 
 ## Licencia
 
