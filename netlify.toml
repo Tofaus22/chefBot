@@ -1,4 +1,5 @@
 [build]
+  base = "chefbot"
   command = "npm run build"
   publish = ".next"
 
@@ -8,3 +9,7 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
+
+[dev]
+  command = "npm --prefix chefbot run dev"
+  targetPort = 3000
