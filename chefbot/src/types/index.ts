@@ -19,3 +19,16 @@ export interface ChatMessage {
   role: "user" | "model";
   parts: { text: string }[];
 }
+
+export interface RecipeProfile {
+  user_id?: string;
+  alergias: string[] | null;
+  dieta: string | null;
+  nivel: string | null;
+  presupuesto: string | null;
+  tiempo_disponible: string | null;
+  ingredientes_frecuentes: string[] | null;
+  porciones_habituales: number | null;
+  onboarding_done: boolean | null;
+  updated_at?: string | null;
+}

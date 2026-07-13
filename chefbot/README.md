@@ -1,36 +1,74 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ChefBot
 
-## Getting Started
+Asistente culinario con IA conversacional, construido con **Next.js 14**, **TypeScript**, **TailwindCSS** y **Supabase**. Potenciado por **Llama 3.1** vía **Groq**.
 
-First, run the development server:
+## Descripción
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+ChefBot te ayuda a cocinar mejor: sugiere recetas adaptadas a tu perfil culinario, mantiene un historial de conversaciones, permite guardar favoritas, generar listas de compras, navegar paso a paso en modo cocina y compartir recetas con un enlace.
+
+## Stack
+
+- **Frontend:** Next.js 14 (App Router) + React 18 + TypeScript
+- **UI:** TailwindCSS + Radix UI + Lucide icons + react-markdown
+- **Backend / Auth:** Supabase (Postgres, Auth, RLS)
+- **IA:** Groq SDK (Llama 3.1)
+- **Estado / datos:** Hooks propios (`use-chat`, `use-sidebar-data`, `use-favorite`, etc.)
+
+## Funcionalidades
+
+- Chat conversacional con streaming y memoria por conversación.
+- Perfil culinario con onboarding inicial (nivel, preferencias, alergias).
+- Historial agrupado por fecha (Hoy / Ayer / Esta semana / Anteriores) con búsqueda.
+- Favoritos con filtro por dificultad (Fácil / Media / Difícil).
+- Modo cocina paso a paso para recetas.
+- Lista de compras generada desde una receta.
+- Compartir conversación con enlace público (`/share/[token]`).
+- Tema claro / oscuro.
+- Acciones de mensaje: copiar, regenerar, feedback (like / dislike).
+- Botón para eliminar todas las conversaciones de un grupo desde el sidebar.
+
+## Estructura
+
+```
+src/
+├── app/
+│   ├── api/chat/         # Endpoint streaming de chat
+│   ├── auth/             # Login / signup
+│   ├── chat/             # Pantalla principal
+│   └── share/[token]/    # Vista pública de receta compartida
+├── components/
+│   ├── sidebar/          # ContextMenu, DeleteDialog, ShareToast, ConversationItem
+│   ├── ui/               # Button, Input, Card, ScrollArea, Avatar, Skeleton
+│   └── *.tsx             # chat-window, input-bar, message-bubble, etc.
+├── hooks/                # use-chat, use-sidebar-data, use-favorite, ...
+├── lib/                  # supabase client, prompts, cache, group-conversations
+└── types/                # Tipos compartidos
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Variables de entorno
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Crea un archivo `.env.local`:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+GROQ_API_KEY=...
+```
 
-## Learn More
+## Comandos
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+npm install
+npm run dev        # desarrollo en http://localhost:3000
+npm run build      # build de producción
+npm run start      # servidor de producción
+npm run lint       # ESLint
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Base de datos
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Ejecuta `supabase-setup.sql` para crear el esquema inicial y `supabase-migrations.sql` para las migraciones posteriores (favoritos, perfil culinario, tokens de compartido, etc.).
 
-## Deploy on Vercel
+## Licencia
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT

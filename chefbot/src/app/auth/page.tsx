@@ -1,27 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
+import { invalidateAuthCache, invalidateProfileCache } from "@/lib/cache";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ChefHat, Loader2 } from "lucide-react";
 
-export default function AuthPage() {
+function AuthPageInner() {
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
-  const supabase = createClient();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const toggleMode = useCallback(() => {
+    setIsLogin((p) => !p);
+    setError(null);
+    setMessage(null);
+  }, []);
+
+  const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setMessage(null);
 
+    const supabase = createClient();
     if (isLogin) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) {
@@ -29,6 +36,8 @@ export default function AuthPage() {
           ? "Email o contraseña incorrectos"
           : error.message);
       } else {
+        invalidateAuthCache();
+        invalidateProfileCache();
         window.location.href = "/chat";
       }
     } else {
@@ -39,9 +48,8 @@ export default function AuthPage() {
         setMessage("¡Cuenta creada! Revisa tu email para confirmar tu cuenta.");
       }
     }
-
     setLoading(false);
-  };
+  }, [email, password, isLogin]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -115,11 +123,7 @@ export default function AuthPage() {
           <div className="mt-4 text-center">
             <button
               type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError(null);
-                setMessage(null);
-              }}
+              onClick={toggleMode}
               className="text-sm text-muted-foreground hover:text-primary transition-colors"
             >
               {isLogin
@@ -132,3 +136,5 @@ export default function AuthPage() {
     </div>
   );
 }
+
+export default memo(AuthPageInner);

@@ -1,55 +1,63 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useChat } from "@/hooks/use-chat";
+import { useTheme } from "@/hooks/use-theme";
+import { getUserId, getCachedProfile, invalidateProfileCache } from "@/lib/cache";
 import { Sidebar } from "@/components/sidebar";
 import { ChatWindow } from "@/components/chat-window";
 import { InputBar } from "@/components/input-bar";
-import { useChat } from "@/hooks/use-chat";
+import { CulinaryProfile } from "@/components/culinary-profile";
+import { UserCircle2 } from "lucide-react";
 
 export default function ChatPage() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
-  const [isDark, setIsDark] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const { isDark, toggle: toggleTheme } = useTheme();
 
-  // Sync theme from localStorage on mount
   useEffect(() => {
-    const stored = localStorage.getItem("chefbot-theme");
-    const dark = stored !== "light";
-    setIsDark(dark);
-    document.documentElement.classList.toggle("dark", dark);
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setIsDark((prev) => {
-      const next = !prev;
-      localStorage.setItem("chefbot-theme", next ? "dark" : "light");
-      document.documentElement.classList.toggle("dark", next);
-      return next;
-    });
+    let cancelled = false;
+    (async () => {
+      const userId = await getUserId();
+      if (!userId || cancelled) return;
+      const profile = await getCachedProfile(userId);
+      if (!cancelled && (!profile || !profile.onboarding_done)) {
+        setShowOnboarding(true);
+      }
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   const handleConversationCreated = useCallback((id: string) => {
     setCurrentConversationId(id);
   }, []);
 
-  const { messages, isLoading, error, sendMessage, loadMessages, clearMessages } = useChat({
+  const { messages, isLoading, error, sendMessage, loadMessages, clearMessages, stop } = useChat({
     conversationId: currentConversationId,
     onConversationCreated: handleConversationCreated,
   });
 
-  const handleSelectConversation = useCallback(async (id: string) => {
-    setCurrentConversationId(id);
-    clearMessages();
-    await loadMessages(id);
-  }, [clearMessages, loadMessages]);
+  const handleSelectConversation = useCallback(
+    async (id: string) => {
+      setCurrentConversationId(id);
+      clearMessages();
+      await loadMessages(id);
+    },
+    [clearMessages, loadMessages]
+  );
 
   const handleNewConversation = useCallback(() => {
     setCurrentConversationId(null);
     clearMessages();
   }, [clearMessages]);
 
-  const handleSuggest = useCallback((text: string) => {
-    sendMessage(text);
-  }, [sendMessage]);
+  const handleSuggest = useCallback((text: string) => sendMessage(text), [sendMessage]);
+
+  const handleOnboardingComplete = useCallback(() => {
+    invalidateProfileCache();
+    setShowOnboarding(false);
+  }, []);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -62,7 +70,6 @@ export default function ChatPage() {
       />
 
       <main className="flex-1 flex flex-col min-w-0">
-        {/* Header */}
         <div className="border-b border-border px-6 py-3 flex items-center justify-between pl-16 md:pl-6">
           <div>
             <h2 className="font-semibold text-foreground">
@@ -70,25 +77,42 @@ export default function ChatPage() {
             </h2>
             <p className="text-xs text-muted-foreground">ChefBot • Powered by Llama 3.1 (Groq)</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setShowProfile(true)}
+              className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-amber-500 transition-colors"
+              title="Tu perfil culinario"
+            >
+              <UserCircle2 className="h-4 w-4" />
+              <span className="hidden sm:inline">Mi perfil</span>
+            </button>
             <div className="h-2 w-2 rounded-full bg-green-500" />
             <span className="text-xs text-muted-foreground">En línea</span>
           </div>
         </div>
 
-        {/* Error banner */}
         {error && (
           <div className="bg-destructive/10 text-destructive text-sm px-6 py-2 border-b border-destructive/20">
             {error}
           </div>
         )}
 
-        {/* Chat area */}
         <ChatWindow messages={messages} isLoading={isLoading} onSuggest={handleSuggest} />
 
-        {/* Input */}
-        <InputBar onSend={sendMessage} isLoading={isLoading} />
+        <InputBar onSend={sendMessage} onStop={stop} isLoading={isLoading} />
       </main>
+
+      <CulinaryProfile
+        isOpen={showOnboarding}
+        onClose={() => setShowOnboarding(false)}
+        isOnboarding={true}
+        onOnboardingComplete={handleOnboardingComplete}
+      />
+
+      <CulinaryProfile
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+      />
     </div>
   );
 }
