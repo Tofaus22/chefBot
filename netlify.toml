@@ -1,10 +1,15 @@
 [build]
+  base = "chefbot"
   command = "npm run build"
   publish = ".next"
 
 [build.environment]
   NODE_VERSION = "20"
   NPM_FLAGS = "--legacy-peer-deps"
+
+[dev]
+  command = "npm --prefix chefbot run dev"
+  targetPort = 3000
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
