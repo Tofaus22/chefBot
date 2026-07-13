@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
   Copy, Check, Heart, Printer, ShoppingCart, UtensilsCrossed,
-  Loader2, ThumbsUp, ThumbsDown,
+  Loader2, ThumbsUp, ThumbsDown, RotateCw,
 } from "lucide-react";
 
 interface MessageActionsProps {
@@ -15,19 +15,22 @@ interface MessageActionsProps {
   feedback: boolean | null;
   showShopping: boolean;
   showCooking: boolean;
+  showRegenerate: boolean;
+  regenerating: boolean;
   onCopy: () => void;
   onToggleFavorite: () => void;
   onPrint: () => void;
   onVote: (useful: boolean) => void;
   onOpenShopping: () => void;
   onOpenCooking: () => void;
+  onRegenerate?: () => void;
 }
 
 function MessageActionsInner({
   copied, favorited, favLoading, feedback,
-  showShopping, showCooking,
+  showShopping, showCooking, showRegenerate, regenerating,
   onCopy, onToggleFavorite, onPrint,
-  onVote, onOpenShopping, onOpenCooking,
+  onVote, onOpenShopping, onOpenCooking, onRegenerate,
 }: MessageActionsProps) {
   return (
     <div className="flex items-center gap-1 px-1">
@@ -84,6 +87,23 @@ function MessageActionsInner({
         >
           <UtensilsCrossed className="h-3 w-3" />
           Cocinar
+        </Button>
+      )}
+      {showRegenerate && (
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={onRegenerate}
+          disabled={regenerating}
+          className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground gap-1"
+          title="Generar una respuesta nueva"
+        >
+          {regenerating ? (
+            <Loader2 className="h-3 w-3 animate-spin" />
+          ) : (
+            <RotateCw className="h-3 w-3" />
+          )}
+          Regenerar
         </Button>
       )}
       <div className="ml-1 flex items-center gap-0.5 border-l border-border pl-2">

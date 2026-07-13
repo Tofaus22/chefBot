@@ -3,22 +3,25 @@
 import { useEffect, useRef, useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
-  Share2, Pencil, Pin, PinOff, Trash2,
+  Share2, Pencil, Pin, PinOff, Trash2, GlobeOff,
 } from "lucide-react";
 import type { Conversation } from "@/types";
 
 interface ContextMenuProps {
   conv: Conversation;
   position: { x: number; y: number };
+  isShared?: boolean;
   onClose: () => void;
   onRename: (conv: Conversation) => void;
   onDelete: (conv: Conversation) => void;
   onTogglePin: (conv: Conversation) => void;
   onShare: (conv: Conversation) => void;
+  onRevoke?: (conv: Conversation) => void;
 }
 
 export function ContextMenu({
-  conv, position, onClose, onRename, onDelete, onTogglePin, onShare,
+  conv, position, isShared = false,
+  onClose, onRename, onDelete, onTogglePin, onShare, onRevoke,
 }: ContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -52,8 +55,17 @@ export function ContextMenu({
         onClick={() => { onShare(conv); onClose(); }}
         className={cn(item, "text-foreground hover:bg-accent")}
       >
-        <Share2 className="h-4 w-4 text-muted-foreground" /> Compartir
+        <Share2 className="h-4 w-4 text-muted-foreground" />
+        {isShared ? "Compartir de nuevo" : "Compartir"}
       </button>
+      {isShared && onRevoke && (
+        <button
+          onClick={() => { onRevoke(conv); onClose(); }}
+          className={cn(item, "text-foreground hover:bg-accent")}
+        >
+          <GlobeOff className="h-4 w-4 text-muted-foreground" /> Dejar de compartir
+        </button>
+      )}
       <button
         onClick={() => { onRename(conv); onClose(); }}
         className={cn(item, "text-foreground hover:bg-accent")}

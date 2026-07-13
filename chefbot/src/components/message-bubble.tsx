@@ -9,10 +9,13 @@ import { hasIngredients, hasSteps } from "@/lib/recipe-utils";
 import { MarkdownBody } from "@/components/markdown-body";
 import { MessageActions } from "@/components/message-actions";
 import { SuggestionsList } from "@/components/suggestions-list";
-import { Minus, Plus } from "lucide-react";
+import {
+  Minus, Plus, Pencil
+} from "lucide-react";
 import { useFavorite } from "@/hooks/use-favorite";
 import { useFeedback } from "@/hooks/use-feedback";
 import type { Message } from "@/types";
+import type { ChatEnvelope } from "@/lib/structured-recipe";
 
 const ShoppingListModal = dynamic(
   () => import("@/components/shopping-list").then((m) => m.ShoppingListModal),
@@ -80,19 +83,40 @@ function buildPrintHtml(cleanContent: string): string {
 interface MessageBubbleProps {
   message: Message;
   isLoading?: boolean;
+  isLast?: boolean;
+  isEditing?: boolean;
+  regenerating?: boolean;
   onSuggest?: (text: string) => void;
+  onRegenerate?: () => void;
+  onStartEdit?: (messageId: string) => void;
 }
 
-function MessageBubbleInner({ message, isLoading, onSuggest }: MessageBubbleProps) {
+function MessageBubbleInner({
+  message,
+  isLoading,
+  isLast = false,
+  isEditing = false,
+  regenerating = false,
+  onSuggest,
+  onRegenerate,
+  onStartEdit,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
+  const envelope: ChatEnvelope | null = message.structured ?? null;
+  const recipe = envelope?.recipe ?? null;
 
   const [copied, setCopied] = useState(false);
   const [servings, setServings] = useState<number | null>(null);
   const [showShoppingList, setShowShoppingList] = useState(false);
   const [showCookingMode, setShowCookingMode] = useState(false);
 
-  const baseServings = useMemo(() => parseServings(message.content), [message.content]);
-  const suggestions = useMemo(() => parseSuggestions(message.content), [message.content]);
+  const legacyServings = useMemo(() => parseServings(message.content), [message.content]);
+  const baseServings = recipe?.porciones ?? legacyServings;
+  const fallbackSuggestions = useMemo(() => parseSuggestions(message.content), [message.content]);
+  const suggestions =
+    envelope?.sugerencias && envelope.sugerencias.length > 0
+      ? envelope.sugerencias
+      : fallbackSuggestions;
   const cleanContent = useMemo(() => stripSuggestions(message.content), [message.content]);
 
   const { favorited, loading: favLoading, toggle: toggleFavorite } = useFavorite(message.id, isUser);
@@ -101,9 +125,10 @@ function MessageBubbleInner({ message, isLoading, onSuggest }: MessageBubbleProp
   const currentServings = servings ?? baseServings;
   const ratio = baseServings && currentServings ? currentServings / baseServings : 1;
   const displayContent = ratio !== 1 ? scaleIngredients(cleanContent, ratio) : cleanContent;
+  const isStreaming = isLoading && message.content === "";
   const showActions = !isUser && message.content.length > 50 && !isLoading;
   const showServingsScaler = showActions && baseServings;
-  const isStreaming = isLoading && message.content === "";
+  const showRegenerate = showActions && isLast && !regenerating && !isStreaming && !!onRegenerate;
 
   const handleCopy = useCallback(async () => {
     await navigator.clipboard.writeText(cleanContent);
@@ -134,10 +159,10 @@ function MessageBubbleInner({ message, isLoading, onSuggest }: MessageBubbleProp
   const handleOpenCooking = useCallback(() => setShowCookingMode(true), []);
   const handleCloseCooking = useCallback(() => setShowCookingMode(false), []);
 
-  const canShowShopping = showActions && hasIngredients(cleanContent);
-  const canShowCooking = showActions && hasSteps(cleanContent);
+  const canShowShopping = showActions && (!!recipe || hasIngredients(cleanContent));
+  const canShowCooking = showActions && (!!recipe || hasSteps(cleanContent));
 
-  const recipeTitle = cleanContent.match(TITLE_RE)?.[1]?.trim();
+  const recipeTitle = recipe?.titulo ?? cleanContent.match(TITLE_RE)?.[1]?.trim();
 
   return (
     <div className={cn("flex gap-3 animate-fade-in", isUser ? "flex-row-reverse" : "flex-row")}>
@@ -205,13 +230,31 @@ function MessageBubbleInner({ message, isLoading, onSuggest }: MessageBubbleProp
             feedback={feedback}
             showShopping={canShowShopping}
             showCooking={canShowCooking}
+            showRegenerate={showRegenerate}
+            regenerating={regenerating}
             onCopy={handleCopy}
             onToggleFavorite={toggleFavorite}
             onPrint={handlePrint}
             onVote={vote}
             onOpenShopping={handleOpenShopping}
             onOpenCooking={handleOpenCooking}
+            onRegenerate={onRegenerate}
           />
+        )}
+
+        {isUser && isLast && !isLoading && !isEditing && onStartEdit && (
+          <button
+            onClick={() => onStartEdit(message.id)}
+            className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors px-1"
+            title="Editar este mensaje y regenerar la respuesta"
+          >
+            <Pencil className="h-3 w-3" />
+            Editar
+          </button>
+        )}
+
+        {isUser && isEditing && (
+          <span className="text-[11px] text-amber-500 px-1">Editando…</span>
         )}
 
         {!isUser && suggestions.length > 0 && !isLoading && (
@@ -225,6 +268,8 @@ function MessageBubbleInner({ message, isLoading, onSuggest }: MessageBubbleProp
           onClose={handleCloseShopping}
           recipeContent={cleanContent}
           recipeTitle={recipeTitle}
+          structuredRecipe={recipe}
+          servingsRatio={ratio}
         />
       )}
 
@@ -233,6 +278,7 @@ function MessageBubbleInner({ message, isLoading, onSuggest }: MessageBubbleProp
           isOpen={showCookingMode}
           onClose={handleCloseCooking}
           recipeContent={cleanContent}
+          structuredRecipe={recipe}
         />
       )}
     </div>

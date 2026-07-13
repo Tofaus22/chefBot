@@ -9,10 +9,20 @@ import type { Message } from "@/types";
 interface ChatWindowProps {
   messages: Message[];
   isLoading: boolean;
+  editingUserId?: string | null;
   onSuggest?: (text: string) => void;
+  onRegenerate?: () => void;
+  onStartEdit?: (messageId: string) => void;
 }
 
-function ChatWindowInner({ messages, isLoading, onSuggest }: ChatWindowProps) {
+function ChatWindowInner({
+  messages,
+  isLoading,
+  editingUserId,
+  onSuggest,
+  onRegenerate,
+  onStartEdit,
+}: ChatWindowProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -26,14 +36,22 @@ function ChatWindowInner({ messages, isLoading, onSuggest }: ChatWindowProps) {
     <ScrollArea className="flex-1 px-4">
       <div className="flex flex-col gap-4 py-4">
         {messages.length === 0 && <WelcomeScreen onSuggest={onSuggest} />}
-        {messages.map((message) => (
-          <MessageBubble
-            key={message.id}
-            message={message}
-            isLoading={isLoading && message.role === "assistant" && message.content === ""}
-            onSuggest={onSuggest}
-          />
-        ))}
+        {messages.map((message, idx) => {
+          const isLast = idx === messages.length - 1;
+          return (
+            <MessageBubble
+              key={message.id}
+              message={message}
+              isLoading={isLoading && message.role === "assistant" && message.content === ""}
+              isLast={isLast}
+              isEditing={editingUserId === message.id}
+              regenerating={isLoading && message.role === "assistant" && message.content !== "" && isLast}
+              onSuggest={onSuggest}
+              onRegenerate={onRegenerate}
+              onStartEdit={onStartEdit}
+            />
+          );
+        })}
         <div ref={bottomRef} />
       </div>
     </ScrollArea>

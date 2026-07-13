@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { useChat } from "@/hooks/use-chat";
 import { useTheme } from "@/hooks/use-theme";
 import { getUserId, getCachedProfile, invalidateProfileCache } from "@/lib/cache";
@@ -8,7 +8,8 @@ import { Sidebar } from "@/components/sidebar";
 import { ChatWindow } from "@/components/chat-window";
 import { InputBar } from "@/components/input-bar";
 import { CulinaryProfile } from "@/components/culinary-profile";
-import { UserCircle2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { UserCircle2, RefreshCw } from "lucide-react";
 
 export default function ChatPage() {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
@@ -33,7 +34,21 @@ export default function ChatPage() {
     setCurrentConversationId(id);
   }, []);
 
-  const { messages, isLoading, error, sendMessage, loadMessages, clearMessages, stop } = useChat({
+  const {
+    messages,
+    isLoading,
+    error,
+    editingUserId,
+    sendMessage,
+    loadMessages,
+    clearMessages,
+    stop,
+    regenerate,
+    retry,
+    startEdit,
+    cancelEdit,
+    submitEdit,
+  } = useChat({
     conversationId: currentConversationId,
     onConversationCreated: handleConversationCreated,
   });
@@ -58,6 +73,23 @@ export default function ChatPage() {
     invalidateProfileCache();
     setShowOnboarding(false);
   }, []);
+
+  const editingText = useMemo(() => {
+    if (!editingUserId) return null;
+    const m = messages.find((msg) => msg.id === editingUserId);
+    return m?.content ?? null;
+  }, [editingUserId, messages]);
+
+  const handleSubmitEdit = useCallback(
+    (text: string) => {
+      if (editingUserId) void submitEdit(editingUserId, text);
+    },
+    [editingUserId, submitEdit]
+  );
+
+  const handleRetry = useCallback(() => {
+    void retry();
+  }, [retry]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -92,14 +124,37 @@ export default function ChatPage() {
         </div>
 
         {error && (
-          <div className="bg-destructive/10 text-destructive text-sm px-6 py-2 border-b border-destructive/20">
-            {error}
+          <div className="bg-destructive/10 text-destructive text-sm px-6 py-2 border-b border-destructive/20 flex items-center gap-3">
+            <span className="flex-1">{error}</span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRetry}
+              className="h-7 px-2 text-xs gap-1 border-destructive/30 text-destructive hover:bg-destructive/10"
+            >
+              <RefreshCw className="h-3 w-3" />
+              Reintentar
+            </Button>
           </div>
         )}
 
-        <ChatWindow messages={messages} isLoading={isLoading} onSuggest={handleSuggest} />
+        <ChatWindow
+          messages={messages}
+          isLoading={isLoading}
+          editingUserId={editingUserId}
+          onSuggest={handleSuggest}
+          onRegenerate={regenerate}
+          onStartEdit={startEdit}
+        />
 
-        <InputBar onSend={sendMessage} onStop={stop} isLoading={isLoading} />
+        <InputBar
+          onSend={sendMessage}
+          onStop={stop}
+          isLoading={isLoading}
+          editingText={editingText}
+          onCancelEdit={cancelEdit}
+          onSubmitEdit={handleSubmitEdit}
+        />
       </main>
 
       <CulinaryProfile

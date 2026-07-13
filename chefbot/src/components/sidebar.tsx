@@ -12,6 +12,7 @@ import {
 import { useSidebarData } from "@/hooks/use-sidebar-data";
 import { useShareConversation } from "@/hooks/use-share-conversation";
 import { groupByDate } from "@/lib/group-conversations";
+import { invalidateAuthCache } from "@/lib/cache";
 import type { Conversation } from "@/types";
 import { ContextMenu } from "./sidebar/context-menu";
 import { DeleteDialog } from "./sidebar/delete-dialog";
@@ -46,13 +47,20 @@ export function Sidebar({
   const [deleteConv, setDeleteConv] = useState<Conversation | null>(null);
   const [deleteGroup, setDeleteGroup] = useState<{ label: string; ids: string[] } | null>(null);
 
-  const { conversations, favorites, userEmail, removeConversation, updateConversation } =
-    useSidebarData(currentConversationId);
-  const { share, showToast, closeToast } = useShareConversation();
+  const {
+    conversations, favorites, userEmail,
+    sharedConvIds, addShare, removeShare,
+    removeConversation, updateConversation,
+  } = useSidebarData(currentConversationId);
+  const { share, revoke, showToast, closeToast } = useShareConversation({
+    onShared: addShare,
+    onRevoked: removeShare,
+  });
 
   const handleLogout = useCallback(async () => {
     const supabase = createClient();
     await supabase.auth.signOut();
+    invalidateAuthCache();
     window.location.href = "/auth";
   }, []);
 
@@ -126,9 +134,20 @@ export function Sidebar({
 
   const handleShare = useCallback(
     async (conv: Conversation) => {
-      await share(conv.id);
+      const result = await share(conv.id);
+      if (result?.alreadyShared) {
+        // refresh shared ids in case the row was missed on initial load
+        await addShare(conv.id);
+      }
     },
-    [share]
+    [share, addShare]
+  );
+
+  const handleRevoke = useCallback(
+    async (conv: Conversation) => {
+      await revoke(conv.id);
+    },
+    [revoke]
   );
 
   const filtered = useMemo(() => {
@@ -245,7 +264,7 @@ export function Sidebar({
                     <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
                       {label}
                     </p>
-                    {label === "Anteriores" && convs.length > 0 && (
+                    {label !== "Anclados" && convs.length > 0 && (
                       <button
                         onClick={() => setDeleteGroup({ label, ids: convs.map((c) => c.id) })}
                         title={`Eliminar todas las conversaciones de ${label.toLowerCase()}`}
@@ -260,6 +279,7 @@ export function Sidebar({
                       key={conv.id}
                       conv={conv}
                       isActive={currentConversationId === conv.id}
+                      isShared={sharedConvIds.has(conv.id)}
                       renamingId={renamingId}
                       renameValue={renameValue}
                       onSelect={handleSelect}
@@ -369,11 +389,13 @@ export function Sidebar({
         <ContextMenu
           conv={menuConv}
           position={menuPos}
+          isShared={sharedConvIds.has(menuConv.id)}
           onClose={() => setMenuConv(null)}
           onRename={startRename}
           onDelete={setDeleteConv}
           onTogglePin={handleTogglePin}
           onShare={handleShare}
+          onRevoke={handleRevoke}
         />
       )}
 

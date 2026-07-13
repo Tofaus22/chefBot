@@ -2,12 +2,13 @@
 
 import { memo, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
-import { Pin, MessageSquare, MoreHorizontal } from "lucide-react";
+import { Pin, MessageSquare, MoreHorizontal, Globe } from "lucide-react";
 import type { Conversation } from "@/types";
 
 interface ConversationItemProps {
   conv: Conversation;
   isActive: boolean;
+  isShared?: boolean;
   renamingId: string | null;
   renameValue: string;
   onSelect: (id: string) => void;
@@ -18,7 +19,7 @@ interface ConversationItemProps {
 }
 
 function ConversationItemInner({
-  conv, isActive, renamingId, renameValue,
+  conv, isActive, isShared = false, renamingId, renameValue,
   onSelect, onMenuOpen, onRenameChange, onRenameCommit, onRenameKeyDown,
 }: ConversationItemProps) {
   const inputRef = useRef<HTMLInputElement>(null);
@@ -68,6 +69,16 @@ function ConversationItemInner({
           }}>
             {conv.title}
           </span>
+
+          {isShared && (
+            <span
+              title="Conversación compartida"
+              className="shrink-0 text-sky-500 ml-1"
+              aria-label="Conversación compartida"
+            >
+              <Globe className="h-3.5 w-3.5" />
+            </span>
+          )}
 
           <button
             onClick={(e) => { e.stopPropagation(); onMenuOpen(conv, e); }}
