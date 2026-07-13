@@ -29,6 +29,8 @@ function categorize(line: string): string {
   return "🥦 Verduras y frutas";
 }
 
+export { categorize };
+
 export function extractIngredients(content: string): ShoppingItem[] {
   const match = content.match(
     /##\s*[🥗]*\s*Ingredientes\s*\n([\s\S]*?)(?=\n##|\n---|\n###|$)/i

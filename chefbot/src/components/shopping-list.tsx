@@ -1,16 +1,19 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { X, ShoppingCart, Check, Printer } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { extractIngredients } from "@/lib/recipe-utils";
+import { extractIngredients, categorize } from "@/lib/recipe-utils";
+import type { StructuredRecipe } from "@/lib/structured-recipe";
 
 interface ShoppingListProps {
   isOpen: boolean;
   onClose: () => void;
   recipeContent: string;
   recipeTitle?: string;
+  structuredRecipe?: StructuredRecipe | null;
+  servingsRatio?: number;
 }
 
 interface ShoppingItem {
@@ -19,17 +22,57 @@ interface ShoppingItem {
   category: string;
 }
 
+function fromStructured(recipe: StructuredRecipe, ratio: number): ShoppingItem[] {
+  return recipe.ingredientes.map((ing) => {
+    const scaledQty = scaleQuantity(ing.cantidad, ratio);
+    const text = scaledQty ? `${scaledQty} ${ing.item}`.trim() : `${ing.cantidad} ${ing.item}`.trim();
+    return {
+      text: text.replace(/\s+/g, " "),
+      checked: false,
+      category: categorize(text),
+    };
+  });
+}
+
+function scaleQuantity(cantidad: string, ratio: number): string | null {
+  if (ratio === 1) return cantidad;
+  const trimmed = cantidad.trim();
+  const match = trimmed.match(/^(\d+(?:[.,]\d+)?(?:\s+\d+\/\d+)?|\d+\/\d+)(.*)$/);
+  if (!match) return null;
+  const value = parseFractionToken(match[1]);
+  if (!Number.isFinite(value)) return null;
+  const scaled = value * ratio;
+  const display = Number.isInteger(scaled) ? scaled.toString() : scaled.toFixed(1).replace(/\.0$/, "");
+  return `${display}${match[2]}`;
+}
+
+function parseFractionToken(token: string): number {
+  const cleaned = token.replace(",", ".");
+  if (cleaned.includes("/")) {
+    const [num, den] = cleaned.split(/\s+/).flatMap((p) => p.split("/")).map(Number);
+    if (!den || !Number.isFinite(num) || !Number.isFinite(den)) return NaN;
+    return num / den;
+  }
+  return parseFloat(cleaned);
+}
+
 export function ShoppingListModal({
   isOpen,
   onClose,
   recipeContent,
   recipeTitle,
+  structuredRecipe,
+  servingsRatio = 1,
 }: ShoppingListProps) {
-  const initialItems = useMemo(
-    () => extractIngredients(recipeContent),
-    [recipeContent]
-  );
+  const initialItems = useMemo(() => {
+    if (structuredRecipe) return fromStructured(structuredRecipe, servingsRatio);
+    return extractIngredients(recipeContent);
+  }, [structuredRecipe, recipeContent, servingsRatio]);
   const [items, setItems] = useState<ShoppingItem[]>(initialItems);
+
+  useEffect(() => {
+    setItems(initialItems);
+  }, [initialItems]);
 
   const toggleItem = (idx: number) => {
     setItems((prev) =>

@@ -5,11 +5,33 @@ import { X, ChevronLeft, ChevronRight, Timer, Play, Pause, RotateCcw, ChefHat } 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { extractSteps, extractRecipeTitle } from "@/lib/recipe-utils";
+import type { StructuredRecipe } from "@/lib/structured-recipe";
+import { asStepText, stepTimerMinutes } from "@/lib/structured-recipe";
 
 interface CookingModeProps {
   isOpen: boolean;
   onClose: () => void;
   recipeContent: string;
+  structuredRecipe?: StructuredRecipe | null;
+}
+
+interface CookingStep {
+  number: number;
+  text: string;
+  hasTimer: boolean;
+  timerMinutes: number;
+}
+
+function fromStructured(recipe: StructuredRecipe): CookingStep[] {
+  return recipe.pasos.map((step, i) => {
+    const minutos = stepTimerMinutes(step);
+    return {
+      number: i + 1,
+      text: asStepText(step),
+      hasTimer: minutos > 0,
+      timerMinutes: minutos,
+    };
+  });
 }
 
 function formatTime(seconds: number): string {
@@ -18,9 +40,14 @@ function formatTime(seconds: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-export function CookingMode({ isOpen, onClose, recipeContent }: CookingModeProps) {
-  const steps = extractSteps(recipeContent);
-  const title = extractRecipeTitle(recipeContent);
+export function CookingMode({
+  isOpen,
+  onClose,
+  recipeContent,
+  structuredRecipe,
+}: CookingModeProps) {
+  const steps = structuredRecipe ? fromStructured(structuredRecipe) : extractSteps(recipeContent);
+  const title = structuredRecipe?.titulo ?? extractRecipeTitle(recipeContent);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [timerSeconds, setTimerSeconds] = useState(0);

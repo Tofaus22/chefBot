@@ -4,6 +4,7 @@ export interface Message {
   role: "user" | "assistant";
   content: string;
   created_at: string;
+  structured?: import("@/lib/structured-recipe").ChatEnvelope | null;
 }
 
 export interface Conversation {
